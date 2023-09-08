@@ -4285,7 +4285,7 @@ igrf13syn <- function(isv, date, itype, alt, colat, elong) {
 #'   example 100RA , 100 is the temperature (step.value) , R is the sens of the magnetisation and A is the name of the step (step.name)
 #' @references  Coe 1978 : DOI: 10.1029/JB083iB04p01740
 #' Prévost et Al. 1985 DOI: 10.1029/JB090iB12p10417
-#'
+#' 
 #' @param mesures data.frame with the package convention format
 #' @param relative plot with a relative value in percent
 #' @param verbose show comment
@@ -4302,310 +4302,401 @@ igrf13syn <- function(isv, date, itype, alt, colat, elong) {
 #' @param loop.col the color of the line showing the the check loop process
 #' @param pt.col the color of the line and the plot
 #' @export
-arai <- function(mesures, relative = TRUE, verbose = TRUE, show.plot = TRUE, TH = 60, aim.coef = 1E-10*1E6, step.J0 = "20N0", show.step.value = FALSE, R.mark = 'R', V.mark = 'V', P.mark = 'P', L.mark = "L", Q.mark = "Q", pt.col = "blue", loop.col = "forestgreen", begin.step.value = 0, end.step.value = 1000) {
-  # __________________
+arai <- function(mesures,
+relative = TRUE,
+verbose = TRUE,
+show.plot = TRUE,
+TH = 60,
+          aim.coef = 1/(10.8*1E-06),
+          step.J0 = "20N0",
+          show.step.value = TRUE,
+          R.mark = "R",
+          V.mark = "V",
+          P.mark = "P",
+          L.mark = "L",
+          Q.mark = "Q",
+          pt.col = "blue",
+          loop.col = "forestgreen",
+          begin.step.value = 0,
+          end.step.value = 1000)
+  {          
   if (is.null(step.J0)) {
-    step.J0 <- mes.sel$step[1]
+    step.J0 <- mesures$step[1]
   }
-
-  ATRR <- mesures[which(substr(mesures$step, nchar(mesures$step)-1, nchar(mesures$step)-1 ) == R.mark),]
-  ATRV <- mesures[which(substr(mesures$step, nchar(mesures$step)-1, nchar(mesures$step)-1 ) == V.mark),]
-
-  J0 <- mesures [which(trimws(mesures$step) ==trimws(step.J0) ), ]
-  if (J0$F < 0 ) {
+  ATRR <- mesures[which(substr(mesures$step, nchar(mesures$step) - 
+                                 1, nchar(mesures$step) - 1) == R.mark), ]
+  ATRV <- mesures[which(substr(mesures$step, nchar(mesures$step) - 
+                                 1, nchar(mesures$step) - 1) == V.mark), ]
+  J0 <- mesures[which(trimws(mesures$step) == trimws(step.J0)), 
+  ]
+  if (J0$F < 0) {
     warning("error on step.J0, F must be positive")
-
-  } else {
+  }else{
     ATRR <- rbind.data.frame(J0, ATRR)
     ATRV <- rbind.data.frame(J0, ATRV)
   }
-
-  for (i in 1:length(ATRR$step) ) {
-    ATRR$step.name[i] <- substr(ATRR$step[i], nchar(ATRR$step[i]), nchar(ATRR$step[i]) )
+  for (i in 1:length(ATRR$step)) {
+    ATRR$step.name[i] <- substr(ATRR$step[i], nchar(ATRR$step[i]), 
+                                nchar(ATRR$step[i]))
   }
-  for (i in 1:length(ATRV$step) ) {
-    ATRV$step.name[i] <- substr(ATRV$step[i], nchar(ATRV$step[i]), nchar(ATRV$step[i]) )
+  for (i in 1:length(ATRV$step)) {
+    ATRV$step.name[i] <- substr(ATRV$step[i], nchar(ATRV$step[i]), 
+                                nchar(ATRV$step[i]))
   }
-
-
   ARN <- NULL
   ATR <- NULL
   RN <- NULL
   TR <- NULL
   pt.col.res <- NULL
-  # tableau ATR vs ARN
   for (i in ATRR$step.name) {
     iATRR <- which(ATRR$step.name == i)
     iATRV <- which(ATRV$step.name == i)
-
-    atrXR <- ATRR[iATRR, ]$X *aim.coef
-    atrXV <- ATRV[iATRV, ]$X *aim.coef
-
-    atrYR <- ATRR[iATRR, ]$Y *aim.coef
-    atrYV <- ATRV[iATRV, ]$Y *aim.coef
-
-    atrZR <- ATRR[iATRR, ]$Z *aim.coef
-    atrZV <- ATRV[iATRV, ]$Z *aim.coef
-
+    atrXR <- ATRR[iATRR, ]$X * aim.coef
+    atrXV <- ATRV[iATRV, ]$X * aim.coef
+    atrYR <- ATRR[iATRR, ]$Y * aim.coef
+    atrYV <- ATRV[iATRV, ]$Y * aim.coef
+    atrZR <- ATRR[iATRR, ]$Z * aim.coef
+    atrZV <- ATRV[iATRV, ]$Z * aim.coef
+    SuscepR <- ATRR[iATRR, ]$Suscep
+    SuscepV <- ATRV[iATRV, ]$Suscep
     if (ATRR[iATRR, ]$step.value != ATRV[iATRV, ]$step.value) {
-      warning(paste0("Error in step.name within step.value = ", ATRR[iATRR, ]$step, ATRV[iATRV, ]$step) )
+      warning(paste0("Error in step.name within step.value = ", 
+                     ATRR[iATRR, ]$step, ATRV[iATRV, ]$step))
       next
     }
-
     RN$X <- (atrXR + atrXV)/2
     RN$Y <- (atrYR + atrYV)/2
     RN$Z <- (atrZR + atrZV)/2
-
     RN <- to.polar(RN$X, RN$Y, RN$Z)
+    
+    for (j in length(SuscepR)){
+      if(SuscepR[j] != 0 & SuscepV[j] != 0){
+        RN$Suscep[j] <- (SuscepR[j] + SuscepV[j])/2
+      }else{
+        RN$Suscep[j] <- (SuscepR[j] + SuscepV[j])/1
+      }
+    }
     RN$step.value <- ATRR[iATRR, ]$step.value
     RN$step.name <- i
-
-    ARN <-rbind.data.frame(ARN, RN, stringsAsFactors = FALSE)
-
+    ARN <- rbind.data.frame(ARN, RN, stringsAsFactors = FALSE)
     TR$X <- (atrXR - atrXV)/2
     TR$Y <- (atrYR - atrYV)/2
     TR$Z <- (atrZR - atrZV)/2
     TR <- to.polar(TR$X, TR$Y, TR$Z)
     TR$step.value <- ATRR[iATRR, ]$step.value
     TR$step.name <- i
-
-    ATR <-rbind.data.frame(ATR, TR, stringsAsFactors = FALSE)
-    if ((RN$step.value >= begin.step.value) && (RN$step.value <= end.step.value)) {
+    ATR <- rbind.data.frame(ATR, TR, stringsAsFactors = FALSE)
+  
+    if ((RN$step.value >= begin.step.value) && (RN$step.value <= 
+                                                end.step.value)) {
       pt.col.res <- c(pt.col.res, "red")
-    } else {
+    }
+    else {
       pt.col.res <- c(pt.col.res, pt.col)
     }
   }
+  
+  #Plot et stat
   xlim <- range(ATR$F)
-  ylim <- range(ARN$F)
-
+  ylim <- c(0, max(ARN$F))
   if (relative == TRUE) {
-    ATRmax <- max(ATR$F) / 100
-    ARNmax <- max(ARN$F) / 100
-  } else {
+    ATRmax <- max(ATR$F)/100
+    ARNmax <- max(ARN$F)/100
+  }else if(relative == "J0"){
+    ARNmax <- J0$F* aim.coef/100
+    ATRmax <- ARNmax
+  }else{
     ATRmax <- 1
-    ARNmax <- 1
+    ARNmax <- 1    
   }
-
-  # Plot Arai
+  
+    # Normalisation
+  ARN$F <- ARN$F/ARNmax
+  ATR$F <- ATR$F/ATRmax
+  
   if (show.plot == TRUE) {
-
-    xlim <- range(ATR$F/ATRmax)
-    ylim <- range(ARN$F/ARNmax)
+    xlim <- range(ATR$F)
+    ylim <- c(0, max(ARN$F))
     if (relative == TRUE) {
       xlab <- "% ATR"
       ylab <- "% ARN"
-    } else {
+      
+    }else if(relative == "J0"){
+      xlab <- "% ATR"
+      ylab <- "% ARN"
+      
+    }else{
       xlab <- "ATR"
       ylab <- "ARN"
     }
-
-    plot(y = ARN$F/ARNmax, x = ATR$F/ATRmax, type='o', col = pt.col.res, pch = 20, xlim = xlim, ylim = ylim, xlab = xlab, ylab = ylab)
+    plot(y = ARN$F, x = ATR$F, type = "o", 
+         col = pt.col.res, pch = 20, xlim = xlim, ylim = ylim, 
+         xlab = xlab, ylab = ylab)
     if (show.step.value == TRUE) {
-      text(y= ARN$F, x=ATR$F, ARN$step.value, adj = 0)
+      text(y = ARN$F, x = ATR$F, ARN$step.value, adj = 0)
     }
   }
-
-  # stat with all points
+  
   Xmoy <- mean(ATR$F)
   Ymoy <- mean(ARN$F)
   n <- length(ATR$F)
-
-  # calcul with a population, not with a sample
-  covYX <- cov(ATR$F, ARN$F) * (n-1)/n
-  S2x <- var(ATR$F) * (n-1)/n
-  S2y <- var(ARN$F) * (n-1)/n
-
+  covYX <- cov(ATR$F, ARN$F) * (n - 1)/n
+  S2x <- var(ATR$F) * (n - 1)/n
+  S2y <- var(ARN$F) * (n - 1)/n
   a_tot <- -sqrt(S2y/S2x)
-  b_tot <- Ymoy - a_tot*Xmoy
+  b_tot <- Ymoy - a_tot * Xmoy
   JTRM <- (-b_tot/a_tot)
-
-  # loop pTRM check
-  ATRP <- mesures[which(substr(mesures$step, nchar(mesures$step)-1, nchar(mesures$step)-1 ) == P.mark),]
-  for (i in 1:length(ATRP$step) ) {
-    ATRP$step.name[i] <- substr(ATRP$step[i], nchar(ATRP$step[i]), nchar(ATRP$step[i]) )
+  
+  
+  # #Enveloppe d'erreur
+  # Ic.sup.A <- NULL
+  # Ic.inf.A <- NULL
+  #   
+  #   ## Estimateur de la variance des erreurs
+  #   for (k in 1:length(ARN$F)){
+  #     sigEtoile <- (1/(n-2))*sum((ARN$F[k] - Ymoy)^2)
+  #   }
+  # 
+  #   ## t value à 95% pour df degré de liberté
+  #   tvalue <- qt(p = 0.05/2, df = n-2, lower.tail = FALSE)
+  # 
+  #   ## Borne de l'Ic
+  #   for (k in 1:length(ARN$F)){
+  #     
+  #     # ICI la valeur ARN$F[k] est censé être l'estimateur de la valeur de Y à la kième température, c'est à dire la valeur de Y obtenu par la régression linéaire selon les moindres carrés.
+  #     
+  #     Ic.sup.A <- rbind(Ic.sup.A, ARN$F[k] + tvalue*sigEtoile*sqrt((1/n)+(1/n)*(1/S2x)*(ATR$F[k] - Xmoy)^2))
+  #     
+  #     Ic.inf.A <- rbind(Ic.inf.A, ARN$F[k] - tvalue*sigEtoile*sqrt((1/n)+(1/n)*(1/S2x)*(ATR$F[k] - Xmoy)^2))
+  # 
+  #   }
+    
+    
+    # if (show.plot == TRUE){
+    #   
+    #     plot(y = Ic.sup.A[,1]/ARNmax, x = ATR$F/ATRmax, type = "o", 
+    #      col = "blue", pch = 20, xlim = xlim, ylim = ylim, 
+    #      xlab = xlab, ylab = ylab, new = FALSE)
+    #   
+    #     plot(y = Ic.inf.A[,1]/ARNmax, x = ATR$F/ATRmax, type = "o", 
+    #      col = "blue", pch = 20, xlim = xlim, ylim = ylim, 
+    #      xlab = xlab, ylab = ylab, new = FALSE)
+    # }
+  
+  #Bouclage
+  ATRP <- mesures[which(substr(mesures$step, nchar(mesures$step) - 
+                                 1, nchar(mesures$step) - 1) == P.mark), ]
+  
+  if(length(ATRP[,1]) > 0){
+  for (i in 1:length(ATRP$step)) {
+    ATRP$step.name[i] <- substr(ATRP$step[i], nchar(ATRP$step[i]), 
+                                nchar(ATRP$step[i]))
   }
-
-  # Plot loop
   TP <- NULL
   ATP <- NULL
+  
+  
   for (i in ATRP$step.name) {
     iATRV <- which(ATRV$step.name == i)
     iATRP <- which(ATRP$step.name == i)
-
-    atrXV <- ATRV[iATRV, ]$X *aim.coef
-    atrXP <- ATRP[iATRP, ]$X *aim.coef
-
-    atrYV <- ATRV[iATRV, ]$Y *aim.coef
-    atrYP <- ATRP[iATRP, ]$Y *aim.coef
-
-    atrZV <- ATRV[iATRV, ]$Z *aim.coef
-    atrZP <- ATRP[iATRP, ]$Z *aim.coef
-
-
-    TP$X <-(atrXP - atrXV)/2
+    atrXV <- ATRV[iATRV, ]$X * aim.coef
+    atrXP <- ATRP[iATRP, ]$X * aim.coef
+    atrYV <- ATRV[iATRV, ]$Y * aim.coef
+    atrYP <- ATRP[iATRP, ]$Y * aim.coef
+    atrZV <- ATRV[iATRV, ]$Z * aim.coef
+    atrZP <- ATRP[iATRP, ]$Z * aim.coef
+    TP$X <- (atrXP - atrXV)/2
     TP$Y <- (atrYP - atrYV)/2
     TP$Z <- (atrZP - atrZV)/2
     TP <- to.polar(TP$X, TP$Y, TP$Z)
     TP$step.value <- ATRP[iATRP, ]$step.value
     TP$step.name <- i
-
-    ATP <-rbind.data.frame(ATP, TP, stringsAsFactors = FALSE)
-
     arnLoop.name <- ARN[which(ARN$step.name == i), ]
     arnLoop.value <- ARN[which(ARN$step.value == TP$step.value), ]
     atrLoop <- ATR[which(ATR$step.name == i), ]
+    ATP <- rbind.data.frame(ATP, TP, stringsAsFactors = FALSE)
+    
     if (show.plot == TRUE) {
-      points( x= TP$F/ATRmax, y= arnLoop.value$F/ARNmax, col = loop.col, pch = 4)
-      lines( x= c(atrLoop$F/ATRmax, TP$F/ATRmax, TP$F/ATRmax), y = c(arnLoop.name$F/ARNmax, arnLoop.name$F/ARNmax, arnLoop.value$F/ARNmax), col = loop.col)
+      points(x = TP$F/ATRmax, y = arnLoop.value$F, 
+             col = loop.col, pch = 4)
+      lines(x = c(atrLoop$F, TP$F/ATRmax, TP$F/ATRmax), 
+            y = c(arnLoop.name$F, arnLoop.name$F, 
+                  arnLoop.value$F), col = loop.col)
     }
   }
-
-  res<- NULL
+  }
+  
+  
+  # Statistique et résultats
+  res <- NULL
   res$ARN <- ARN
   res$ATR <- ATR
   res$ATP <- ATP
-
-  # Statistic
-
   n <- 0
   Crm <- CrmMax <- 0
   tabX <- NULL
   tabY <- NULL
-  for (i in 1:length(ARN$step.name))  {
-    if ((ARN$step.value[i] >= begin.step.value) && (ARN$step.value[i] <= end.step.value)) {
-      tabX <- c( tabX, ATR[which(ATR$step.value == ARN$step.value[i]),]$F  /ATRmax)
-      tabY <- c( tabY, ARN$F[i]  /ARNmax)
-      n <- n+1
-
-      if (n==1) {
-        incl_ET1.rad <- ARN$I[i]/180*pi
-      } else {
-        Crm <- ( sin( incl_ET1.rad -ARN$I[i]/180*pi) /sin(incl_ET1.rad -pi/2))*ARN$F[i]
-        if (abs(Crm)>CrmMax) {
+  for (i in 1:length(ARN$step.name)) {
+    if ((ARN$step.value[i] >= begin.step.value) && (ARN$step.value[i] <= 
+                                                    end.step.value)) {
+      tabX <- c(tabX, ATR[which(ATR$step.value == ARN$step.value[i]), 
+      ]$F)
+      tabY <- c(tabY, ARN$F[i])
+      n <- n + 1
+      if (n == 1) {
+        incl_ET1.rad <- ARN$I[i]/180 * pi
+      }
+      else {
+        Crm <- (sin(incl_ET1.rad - ARN$I[i]/180 * pi)/sin(incl_ET1.rad - 
+                                                            pi/2)) * ARN$F[i]
+        if (abs(Crm) > CrmMax) {
           CrmMax <- abs(Crm)
         }
       }
-
-
     }
   }
-  CrmMax <- CrmMax/ ( tabX[length(tabX)] - tabX[1])*100
-
+  CrmMax <- CrmMax/(tabX[length(tabX)] - tabX[1]) * 100
   if (n >= 2) {
     Xmoy <- mean(tabX)
     Ymoy <- mean(tabY)
-
-    # calcul sur une population, pas sur un echantillon
-    covYX <- cov(tabY, tabX) * (n-1)/n
-    S2x <- var(tabX) * (n-1)/n
-    S2y <- var(tabY) * (n-1)/n
-
-    a_aff <- -sqrt(S2y/S2x)
-    b_aff <- Ymoy - a_aff*Xmoy
-
-    abline(b_aff, a_aff, col= "red")
-
-    # Calcul du coef. de corrélation linéaire de la droite entre les 2 étapes
+    covYX <- cov(tabY, tabX) * (n - 1)/n
+    S2x <- var(tabX) * (n - 1)/n
+    S2y <- var(tabY) * (n - 1)/n
+    a_aff <- -sqrt(S2y/S2x) #Coef MCO
+    b_aff <- Ymoy - a_aff * Xmoy #Coef MCO
+    b_coe <- - S2y/S2x
+    
+    if (show.plot == TRUE){
+    abline(b_aff, a_aff, col = "red") #Régression linéaire par MCO
+    }
     R <- cor(tabY, tabX)
-
-    # calcul de la variance eq n°3 : Prévost et Al. 1985 DOI: 10.1029/JB090iB12p10417
-
-    s <-  covYX/sqrt(S2x*S2y)
+    s <- covYX/sqrt(S2x * S2y)
     if (s < -1) {
-      warning('Error on sigma Prévost =', s);
-      s<- abs(s);
-
-    } else {
-      s <- sqrt( 2+(2*s));
-      sigmaPrevost85 <- s/sqrt(n-2);
-      # Calcul de sigma pour Coe 1978 : DOI: 10.1029/JB083iB04p01740
-      sigmaCoe <- ((2*S2y)-2*a_aff*covYX) /((n-2)*S2x)
+      warning("Error on sigma Prévost =", s)
+      s <- abs(s)
+    }
+    else {
+      s <- sqrt(2 + (2 * s))
+      sigmaPrevost85 <- s/sqrt(n - 2)
+      sigmaCoe <- ((2 * S2y) - 2 * a_aff * covYX)/((n - 
+                                                      2) * S2x)
       sigmaCoe <- sqrt(sigmaCoe)
-
     }
-    # fraction of pTRM used
-    fs1s2 <- function(tx,ty, i1, i2) {
-      (a_aff*tabX[i1] + b_aff  + tabY[i1] )/2 - (a_aff*tabX[i2] + b_aff + tabY[i2])/2
+    fs1s2 <- function(tx, ty, i1, i2) {
+      (a_aff * tabX[i1] + b_aff + tabY[i1])/2 - (a_aff * 
+                                                   tabX[i2] + b_aff + tabY[i2])/2
     }
-
     nStep <- length(tabX)
-    # Coe et Al. 1978)
-    fCoe78 <- fs1s2(tabX*ATRmax, tabY*ATRmax, 1, nStep) /b_aff
-
-    g<-0
+    fCoe78 <- fs1s2(tabX * ATRmax, tabY * ATRmax, 1, nStep)/b_aff
+    g <- 0
     for (i in 2:length(tabX)) {
-      g <- g + fs1s2(tabX*ATRmax, tabY*ATRmax, i-1, i)^2
+      g <- g + fs1s2(tabX * ATRmax, tabY * ATRmax, i - 
+                       1, i)^2
     }
-    g <- 1 - g/(fCoe78*b_aff)^2
-
-    qCoe78 <- abs(a_aff)*fCoe78*g/sigmaCoe;
-
-    qPrevost85 <- fCoe78*g/sigmaCoe
-
-    SigFe <- sigmaCoe*TH
-    Fe <- -a_aff*TH
-
+    g <- 1 - g/(fCoe78 * b_aff)^2
+    qCoe78 <- abs(a_aff) * fCoe78 * g/sigmaCoe
+    qPrevost85 <- fCoe78 * g/sigmaCoe
+    SigFe <- sigmaCoe * TH
+    Fe <- -a_aff * TH
+    
+    beta <- sigmaCoe/abs(b_coe)
+    
     if (verbose == TRUE) {
-      Commentaire <- paste0('Coef. Corr. lin. R= ', format(R, digits = 3), ' pour ', n,' points')
-      Commentaire <- c(Commentaire, paste0(' Sigmab ( Coe 1978) = ',format(sigmaCoe, digits = 3)) )
-      Commentaire <- c(Commentaire, paste0('with lab field : ', TH, ' µT => Fe= ', format(Fe, digits = 3), ' ± ', format(SigFe, digits = 3), ' µT (Coe et Al. 1978)') )
-      Commentaire <- c(Commentaire, paste0('f = ', format(fCoe78*100, digits = 4), '% (Coe et Al. 1978)') )
-      Commentaire <- c(Commentaire, paste0('q = ', format(qCoe78, digits = 3)) )
-      Commentaire <- c(Commentaire, paste0('g  = ', format(g, digits = 3)) )
-      Commentaire <- c(Commentaire, paste0('Crm  = ', format(CrmMax, digits = 4), ' (Coe 1984)') )
-
-
-      Commentaire <- c(Commentaire, paste0('q (Prévost 85) = ', format(qPrevost85, digits = 3)) )
-      Commentaire <- c(Commentaire, paste0('sigma (Prévost 85) = ', format(sigmaPrevost85, digits = 3)) )
+      Commentaire <- paste0("Coef. Corr. lin. R= ", format(R, 
+                                                           digits = 3), " pour ", n, " points")
+      Commentaire <- c(Commentaire, paste0(" Sigmab ( Coe 1978) = ", 
+                                           format(sigmaCoe, digits = 3)))
+      Commentaire <- c(Commentaire, paste0("with lab field : ", 
+                                           TH, " µT => Fe= ", format(Fe, digits = 3), " ± ", 
+                                           format(SigFe, digits = 3), " µT (Coe et Al. 1978)"))
+      Commentaire <- c(Commentaire, paste0("f = ", format(fCoe78 * 
+                                                            100, digits = 4), "% (Coe et Al. 1978)"))
+      Commentaire <- c(Commentaire, paste0("q = ", format(qCoe78, 
+                                                          digits = 3)))
+      Commentaire <- c(Commentaire, paste0("g  = ", format(g, 
+                                                           digits = 3)))
+      Commentaire <- c(Commentaire, paste0("Crm  = ", format(CrmMax, 
+                                                             digits = 4), " (Coe 1984)"))
+      Commentaire <- c(Commentaire, paste0("q (Prévost 85) = ", 
+                                           format(qPrevost85, digits = 3)))
+      Commentaire <- c(Commentaire, paste0("sigma (Prévost 85) = ", 
+                                           format(sigmaPrevost85, digits = 3)))
+      
+      Commentaire <- c(Commentaire, paste0("beta (G.Hervé 2011) = ", 
+                                           format (beta, digits = 3)))
+      
       print(Commentaire)
     }
+    
+    #Vitesse de refroidissement
+    ATRL <- mesures[which(substr(mesures$step, nchar(mesures$step) - 
+                                   1, nchar(mesures$step) - 1) == L.mark), ]
+    ATRQ <- mesures[which(substr(mesures$step, nchar(mesures$step) - 
+                                   1, nchar(mesures$step) - 1) == Q.mark), ]
+    
 
-    # Cooling rate
-    # slow step
-    ATRL <- mes.sel[which(substr(mes.sel$step, nchar(mes.sel$step)-1, nchar(mes.sel$step)-1 ) == L.mark),]
-    for (i in 1:length(ATRL$step) ) {
-      ATRL$step.name[i] <- substr(ATRL$step[i], nchar(ATRL$step[i]), nchar(ATRL$step[i]) )
+    
+    if (length(ATRL[,1]) > 0 & length(ATRQ[,1]) > 0){
+    for (i in 1:length(ATRL$step)) {
+      ATRL$step.name[i] <- substr(ATRL$step[i], nchar(ATRL$step[i]), 
+                                  nchar(ATRL$step[i]))
     }
-    ATRQ <- mes.sel[which(substr(mes.sel$step, nchar(mes.sel$step)-1, nchar(mes.sel$step)-1 ) == Q.mark),]
-    for (i in 1:length(ATRQ$step) ) {
-      ATRQ$step.name[i] <- substr(ATRQ$step[i], nchar(ATRQ$step[i]), nchar(ATRQ$step[i]) )
-    }
+    
 
-    # quick step
+    for (i in 1:length(ATRQ$step)) {
+      ATRQ$step.name[i] <- substr(ATRQ$step[i], nchar(ATRQ$step[i]), 
+                                  nchar(ATRQ$step[i]))
+    }
+      
+
+      
     for (i in ATRL$step.name) {
       iARN <- which(ARN$step.name == i)
+
       iATR <- which(ATR$step.name == i)
 
       iATRL <- which(ATRL$step.name == i)
-      atrXL <- ATRL[iATRL, ]$X*aim.coef  - ARN[iARN, ]$X
-      atrYL <- ATRL[iATRL, ]$Y *aim.coef - ARN[iARN, ]$Y
-      atrZL <- ATRL[iATRL, ]$Z*aim.coef  - ARN[iARN, ]$Z
+      
+      atrXL <- ATRL[iATRL, ]$X * aim.coef - ARN[iARN, ]$X
+      atrYL <- ATRL[iATRL, ]$Y * aim.coef - ARN[iARN, ]$Y
+      atrZL <- ATRL[iATRL, ]$Z * aim.coef - ARN[iARN, ]$Z
+      
       trL <- to.polar(atrXL, atrYL, atrZL)
-      rateL <- (trL$F - ATR[iATR, ]$F) / (ATR[iATR, ]$F)
-      FeL <- Fe*(1-rateL)
-      SigFeL <- SigFe * (1-rateL)
-
+      
+      iATRvalue <- which(ATR$step.value == ATRL$step.value)
+      
+      rateL <- (trL$F/ATRmax - ATR[iATRvalue, ]$F)/(ATR[iATRvalue, ]$F)
+      
+      FeL <- Fe * (1 - rateL)
+      SigFeL <- SigFe * (1 - rateL)
+      
       iATRQ <- which(ATRQ$step.name == i)
-      atrXQ <- ATRQ[iATRQ, ]$X *aim.coef - ARN[iARN, ]$X
-      atrYQ <- ATRQ[iATRQ, ]$Y *aim.coef - ARN[iARN, ]$Y
-      atrZQ <- ATRQ[iATRQ, ]$Z *aim.coef - ARN[iARN, ]$Z
+      atrXQ <- ATRQ[iATRQ, ]$X * aim.coef - ARN[iARN, ]$X
+      atrYQ <- ATRQ[iATRQ, ]$Y * aim.coef - ARN[iARN, ]$Y
+      atrZQ <- ATRQ[iATRQ, ]$Z * aim.coef - ARN[iARN, ]$Z
       trQ <- to.polar(atrXQ, atrYQ, atrZQ)
-      rateQ <- (trQ$F - ATR[iATR, ]$F) / (ATR[iATR, ]$F)
-
+      
+      rateQ <- (trQ$F - ATR[iATRvalue, ]$F)/(ATR[iATRvalue, ]$F)
+      
       if (verbose == TRUE) {
-        Commentaire <- paste0('Speed Rate with slow step: ', format(rateL*100, digits = 4), ' %')
-        Commentaire <- c( Commentaire, paste0('Derive speed Rate with quick step: ', format(rateQ*100, digits = 4), ' %') )
-        Commentaire <- c( Commentaire, paste0('Fe Lent= ', format(FeL, digits = 3), ' ± ', format(SigFeL, digits = 3), ' µT') )
-
+        Commentaire <- paste0("Speed Rate with slow step: ", 
+                              format(rateL * 100, digits = 4), " %")
+        Commentaire <- c(Commentaire, paste0("Derive speed Rate with quick step: ", 
+                                             format(rateQ * 100, digits = 4), " %"))
+        Commentaire <- c(Commentaire, paste0("Fe Lent= ", 
+                                             format(FeL, digits = 3), " ± ", format(SigFeL, 
+                                                                                    digits = 3), " µT"))
         print(Commentaire)
-
       }
     }
-
-    res$stat <- data.frame(Fe, SigFe, FeL, SigFeL, rateL, rateQ, sigmaCoe, JTRM, fCoe78, qCoe78, g, CrmMax, qPrevost85, sigmaPrevost85)
-  }
+    
+    res$stat <- data.frame(Fe, SigFe, FeL, SigFeL, rateL, 
+                           rateQ, sigmaCoe, JTRM, fCoe78, qCoe78, g, CrmMax, 
+                           qPrevost85, sigmaPrevost85, s, b_coe, beta)
+    }else{
+      res$stat <- data.frame(Fe, SigFe, sigmaCoe, JTRM, fCoe78, qCoe78, g, CrmMax, 
+                             qPrevost85, sigmaPrevost85, s, b_coe, beta)
+    }
+  } 
   return(res)
 }
-
-
